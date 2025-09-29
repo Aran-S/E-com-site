@@ -1,12 +1,94 @@
+<?php
+session_start();
+require_once('configs/db.php');
+
+if (isset($_SESSION["loggedin"]) && $_SESSION["loggedin"] === true) {
+    header("location: dashboard.php");
+    exit;
+}
+
+$user_err = $user_pass_err = "";
+$admin_err = $admin_pass_err = "";
+
+if ($_SERVER["REQUEST_METHOD"] === 'POST') {
+
+    if (isset($_POST['user_login'])) {
+        $email = trim($_POST['user_email'] ?? '');
+        $password = trim($_POST['user_password'] ?? '');
+
+        if (empty($email)) $user_err = "Please enter your email!";
+        if (empty($password)) $user_pass_err = "Please enter your password!";
+
+        if (empty($user_err) && empty($user_pass_err)) {
+            $password_hashed = md5($password);
+            $sql = "SELECT id, name, level, password, active_status FROM users WHERE mail=? LIMIT 1";
+            if ($stmt = mysqli_prepare($con, $sql)) {
+                mysqli_stmt_bind_param($stmt, "s", $email);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_store_result($stmt);
+                if (mysqli_stmt_num_rows($stmt) === 1) {
+                    mysqli_stmt_bind_result($stmt, $id, $name, $level, $db_password, $active_status);
+                    mysqli_stmt_fetch($stmt);
+                    if ($password_hashed === $db_password) {
+                        if ($level == 1 && $active_status == 0) $user_pass_err = "Your account is not activated yet!";
+                        else {
+                            $_SESSION["loggedin"] = true;
+                            $_SESSION["id"] = $id;
+                            $_SESSION["name"] = $name;
+                            $_SESSION["level"] = $level;
+                            header("location: dashboard.php");
+                            exit;
+                        }
+                    } else $user_pass_err = "Invalid password!";
+                } else $user_err = "No account found with that email.";
+                mysqli_stmt_close($stmt);
+            }
+        }
+    }
+
+    if (isset($_POST['admin_login'])) {
+        $email = trim($_POST['admin_email'] ?? '');
+        $password = trim($_POST['admin_password'] ?? '');
+
+        if (empty($email)) $admin_err = "Please enter your email!";
+        if (empty($password)) $admin_pass_err = "Please enter your password!";
+
+        if (empty($admin_err) && empty($admin_pass_err)) {
+            $password_hashed = md5($password);
+            $sql = "SELECT id, name, level, password, active_status FROM users WHERE mail=? AND level=1 LIMIT 1";
+            if ($stmt = mysqli_prepare($con, $sql)) {
+                mysqli_stmt_bind_param($stmt, "s", $email);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_store_result($stmt);
+                if (mysqli_stmt_num_rows($stmt) === 1) {
+                    mysqli_stmt_bind_result($stmt, $id, $name, $level, $db_password, $active_status);
+                    mysqli_stmt_fetch($stmt);
+                    if ($password_hashed === $db_password) {
+                        if ($active_status == 0) $admin_pass_err = "Your account is not activated yet!";
+                        else {
+                            $_SESSION["loggedin"] = true;
+                            $_SESSION["id"] = $id;
+                            $_SESSION["name"] = $name;
+                            $_SESSION["level"] = $level;
+                            header("location: dashboard.php");
+                            exit;
+                        }
+                    } else $admin_pass_err = "Invalid password!";
+                } else $admin_err = "No admin account found with that email.";
+                mysqli_stmt_close($stmt);
+            }
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShopEase | Login</title>
+    <title>E-Com Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
     <style>
         body {
             background: linear-gradient(135deg, #6f42c1, #0d6efd);
@@ -28,75 +110,69 @@
             height: 60px;
             margin-bottom: 10px;
         }
+
+        .nav-tabs .nav-link {
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
-
     <div class="card login-card p-4">
         <div class="card-body text-center">
-            <!-- Logo -->
             <img src="https://cdn-icons-png.flaticon.com/512/891/891462.png" class="brand-logo" alt="logo">
-            <h3 class="fw-bold mb-4">ShopEase</h3>
+            <h3 class="fw-bold mb-4">E-Com</h3>
 
-            <!-- Tabs -->
             <ul class="nav nav-tabs mb-3 justify-content-center" id="loginTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="user-tab" data-bs-toggle="tab" data-bs-target="#user" type="button" role="tab">User Login</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin" type="button" role="tab">Admin Login</button>
-                </li>
+                <li class="nav-item"><button class="nav-link active" id="user-tab" data-bs-toggle="tab" data-bs-target="#user" type="button">User Login</button></li>
+                <li class="nav-item"><button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin" type="button">Admin Login</button></li>
             </ul>
 
-            <!-- Tab Content -->
             <div class="tab-content" id="loginTabsContent">
-
-                <!-- User Login -->
-                <div class="tab-pane fade show active" id="user" role="tabpanel">
-                    <form>
+                <div class="tab-pane fade show active" id="user">
+                    <form method="post">
                         <div class="mb-3 text-start">
-                            <label for="userEmail" class="form-label">Email address</label>
-                            <input type="email" class="form-control" id="userEmail" placeholder="Enter your email" required>
+                            <label for="userEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="userEmail" name="user_email" placeholder="Enter your email" required>
+                            <span class="text-danger"><?= $user_err ?></span>
                         </div>
                         <div class="mb-3 text-start">
                             <label for="userPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="userPassword" placeholder="Enter your password" required>
+                            <input type="password" class="form-control" id="userPassword" name="user_password" placeholder="Enter your password" required>
+                            <span class="text-danger"><?= $user_pass_err ?></span>
                         </div>
-                        <div class="text-end mb-3">
-                            <a href="#" class="small">Forgot Password?</a>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Login as User</button>
+                        <button type="submit" name="user_login" class="btn btn-primary w-100">Login as User</button>
+                        <p class="mt-3 mb-0 text-center">First time user? <a href="user-register.php">Sign Up</a></p>
                     </form>
-                    <!-- First Time User Link -->
-                    <p class="mt-3 mb-0">First time user? <a href="user-register.html">Sign Up</a></p>
                 </div>
 
-                <!-- Admin Login -->
-                <div class="tab-pane fade" id="admin" role="tabpanel">
-                    <form>
+                <div class="tab-pane fade" id="admin">
+                    <form method="post">
                         <div class="mb-3 text-start">
-                            <label for="adminUsername" class="form-label">Admin Username</label>
-                            <input type="text" class="form-control" id="adminUsername" placeholder="Enter admin username" required>
+                            <label for="adminEmail" class="form-label">Admin Email</label>
+                            <input type="email" class="form-control" id="adminEmail" name="admin_email" placeholder="Enter email" required>
+                            <span class="text-danger"><?= $admin_err ?></span>
                         </div>
                         <div class="mb-3 text-start">
                             <label for="adminPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="adminPassword" placeholder="Enter your password" required>
+                            <input type="password" class="form-control" id="adminPassword" name="admin_password" placeholder="Enter password" required>
+                            <span class="text-danger"><?= $admin_pass_err ?></span>
                         </div>
-                        <div class="text-end mb-3">
-                            <a href="#" class="small">Forgot Password?</a>
-                        </div>
-                        <button type="submit" class="btn btn-danger w-100">Login as Admin</button>
+                        <button type="submit" name="admin_login" class="btn btn-danger w-100">Login as Admin</button>
+                        <p class="mt-3 mb-0 text-center">First time admin? <a href="admin-register.php">Create Account</a></p>
                     </form>
-                    <!-- First Time Admin Link -->
-                    <p class="mt-3 mb-0">First time admin? <a href="admin-register.html">Create Account</a></p>
                 </div>
-
             </div>
+
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
+    </script>
 </body>
 
 </html>
