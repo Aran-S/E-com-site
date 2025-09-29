@@ -175,4 +175,7 @@ This is a simple online shopping website made with PHP and MySQL. It has two typ
 - Make sure all files are in the right folders
 - Try refreshing the page
 
-This is a basic version for learning. For a real website, you'd need more security and features!
+## Username And Password.
+
+- User login={aransivagnanam@gmail.com,1234}
+- Admin={ara@gmail.com,1234}
