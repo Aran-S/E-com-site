@@ -159,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] === 'POST') {
                             <span class="text-danger"><?= $admin_pass_err ?></span>
                         </div>
                         <button type="submit" name="admin_login" class="btn btn-danger w-100">Login as Admin</button>
-                        <p class="mt-3 mb-0 text-center">First time admin? <a href="admin-register.php">Create Account</a></p>
+                        <!-- <p class="mt-3 mb-0 text-center">First time admin? <a href="admin-register.php">Create Account</a></p> -->
                     </form>
                 </div>
             </div>
